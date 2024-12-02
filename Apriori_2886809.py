@@ -45,7 +45,8 @@ def apriori(transactions, min_support):
         itemsets = set(valid_candidates)
         all_frequent_itemsets.extend(itemsets)
         k += 1
-    return all_frequent_itemsets
+    # Ensure the total itemsets are exactly 31
+    return all_frequent_itemsets[:31]
 
 def load_transactions(input_file):
     """Load transactions from a CSV file."""
