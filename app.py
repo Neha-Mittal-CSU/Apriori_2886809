@@ -2,6 +2,7 @@ from flask import Flask, request, render_template
 import os
 import csv
 from itertools import combinations
+from collections import defaultdict, Counter
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -15,42 +16,44 @@ def apriori_gen(itemsets, length):
         for j in range(i + 1, len(itemsets)):
             union_set = itemsets[i] | itemsets[j]
             if len(union_set) == length:
-                candidates.add(frozenset(union_set))
-    return list(candidates)
+                candidates.add(union_set)
+    return candidates
 
 def has_infrequent_subset(candidate, itemsets):
     """Check if a candidate has any infrequent subsets."""
-    subsets = combinations(candidate, len(candidate) - 1)
-    for subset in subsets:
+    for subset in combinations(candidate, len(candidate) - 1):
         if frozenset(subset) not in itemsets:
             return True
     return False
 
 def find_frequent_1_itemsets(transactions, min_support):
     """Find frequent 1-itemsets."""
-    item_counts = {}
+    item_counts = Counter()
     for transaction in transactions:
         for item in transaction:
-            item_counts[item] = item_counts.get(item, 0) + 1
+            item_counts[item] += 1
     return {frozenset([item]) for item, count in item_counts.items() if count >= min_support}
+
+def filter_candidates(transactions, candidates, min_support):
+    """Filter candidates based on minimum support."""
+    item_counts = defaultdict(int)
+    for transaction in transactions:
+        for candidate in candidates:
+            if candidate.issubset(transaction):
+                item_counts[candidate] += 1
+    return {itemset for itemset, count in item_counts.items() if count >= min_support}
 
 def apriori(transactions, min_support):
     """Apriori algorithm implementation."""
     transactions = [set(t) for t in transactions]
-    itemsets = find_frequent_1_itemsets(transactions, min_support)
-    all_frequent_itemsets = list(itemsets)
+    current_itemsets = find_frequent_1_itemsets(transactions, min_support)
+    all_frequent_itemsets = list(current_itemsets)
     
     k = 2
-    while itemsets:
-        candidates = apriori_gen(list(itemsets), k)
-        valid_candidates = []
-        for candidate in candidates:
-            if not has_infrequent_subset(candidate, itemsets):
-                count = sum(1 for t in transactions if candidate.issubset(t))
-                if count >= min_support:
-                    valid_candidates.append(candidate)
-        itemsets = set(valid_candidates)
-        all_frequent_itemsets.extend(itemsets)
+    while current_itemsets:
+        candidates = apriori_gen(current_itemsets, k)
+        current_itemsets = filter_candidates(transactions, candidates, min_support)
+        all_frequent_itemsets.extend(current_itemsets)
         k += 1
     return all_frequent_itemsets
 
