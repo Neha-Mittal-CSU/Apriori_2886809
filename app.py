@@ -2,7 +2,6 @@ from flask import Flask, request, render_template
 import os
 import csv
 from itertools import combinations
-from collections import defaultdict, Counter
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -12,49 +11,46 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def apriori_gen(itemsets, length):
     """Generate candidate itemsets of a given length."""
     candidates = set()
-    itemsets = list(itemsets)  # Convert to list for indexing
     for i in range(len(itemsets)):
         for j in range(i + 1, len(itemsets)):
             union_set = itemsets[i] | itemsets[j]
-            if len(union_set) == length and not has_infrequent_subset(union_set, itemsets):
+            if len(union_set) == length:
                 candidates.add(frozenset(union_set))
-    return candidates
+    return list(candidates)
 
 def has_infrequent_subset(candidate, itemsets):
     """Check if a candidate has any infrequent subsets."""
-    for subset in combinations(candidate, len(candidate) - 1):
+    subsets = combinations(candidate, len(candidate) - 1)
+    for subset in subsets:
         if frozenset(subset) not in itemsets:
             return True
     return False
 
 def find_frequent_1_itemsets(transactions, min_support):
     """Find frequent 1-itemsets."""
-    item_counts = Counter()
+    item_counts = {}
     for transaction in transactions:
         for item in transaction:
-            item_counts[frozenset([item])] += 1
+            item_counts[item] = item_counts.get(item, 0) + 1
     return {frozenset([item]) for item, count in item_counts.items() if count >= min_support}
-
-def filter_candidates(transactions, candidates, min_support):
-    """Filter candidate itemsets based on minimum support."""
-    item_counts = defaultdict(int)
-    for transaction in transactions:
-        for candidate in candidates:
-            if candidate.issubset(transaction):
-                item_counts[candidate] += 1
-    return {itemset for itemset, count in item_counts.items() if count >= min_support}
 
 def apriori(transactions, min_support):
     """Apriori algorithm implementation."""
     transactions = [set(t) for t in transactions]
-    current_itemsets = find_frequent_1_itemsets(transactions, min_support)
-    all_frequent_itemsets = list(current_itemsets)
+    itemsets = find_frequent_1_itemsets(transactions, min_support)
+    all_frequent_itemsets = list(itemsets)
     
     k = 2
-    while current_itemsets:
-        candidates = apriori_gen(current_itemsets, k)
-        current_itemsets = filter_candidates(transactions, candidates, min_support)
-        all_frequent_itemsets.extend(current_itemsets)
+    while itemsets:
+        candidates = apriori_gen(list(itemsets), k)
+        valid_candidates = []
+        for candidate in candidates:
+            if not has_infrequent_subset(candidate, itemsets):
+                count = sum(1 for t in transactions if candidate.issubset(t))
+                if count >= min_support:
+                    valid_candidates.append(candidate)
+        itemsets = set(valid_candidates)
+        all_frequent_itemsets.extend(itemsets)
         k += 1
     return all_frequent_itemsets
 
@@ -89,16 +85,14 @@ def index():
             
             # Prepare output
             output = f"Input file: {file.filename}\n"
-            output += f"Minimal support: {min_support}\n"
+            output += f"min_sup {min_support}\n"
             output += "{ "
-            unique_results = sorted(set(results), key=lambda x: (len(x), sorted(x)))
-            for i, itemset in enumerate(unique_results):
-                itemset_str = ', '.join(map(str, sorted(itemset)))
-                output += f"{{ {itemset_str} }}"
-                if i < len(unique_results) - 1:
+            for i, itemset in enumerate(results):
+                output += f"{{ {', '.join(map(str, itemset))} }}"
+                if i < len(results) - 1:
                     output += " "
             output += " }\n"
-            output += f"End - total items: {len(unique_results)}\n"
+            output += f"End - total items: {len(results)}\n"
             return f"<pre>{output}</pre>"
         except Exception as e:
             return f"<pre>Error: {str(e)}</pre>"
