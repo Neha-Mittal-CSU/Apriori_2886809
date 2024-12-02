@@ -60,7 +60,7 @@ def load_transactions(file_path):
     with open(file_path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
-            transactions.append(row)
+            transactions.append(set(map(int, row)))
     return transactions
 
 @app.route('/', methods=['GET', 'POST'])
@@ -85,11 +85,16 @@ def index():
             
             # Prepare output
             output = f"Input file: {file.filename}\n"
-            output += f"Minimum support: {min_support}\n"
-            output += "Frequent itemsets:\n"
-            for itemset in results:
-                output += f"{set(itemset)}\n"
-            output += f"Total items: {len(results)}\n"
+            output += f"Minimal support: {min_support}\n"
+            output += "{ "
+            unique_results = sorted(set(results), key=lambda x: (len(x), sorted(x)))
+            for i, itemset in enumerate(unique_results):
+                itemset_str = ', '.join(map(str, sorted(itemset)))
+                output += f"{{ {itemset_str} }}"
+                if i < len(unique_results) - 1:
+                    output += " "
+            output += " }\n"
+            output += f"End - total items: {len(unique_results)}\n"
             return f"<pre>{output}</pre>"
         except Exception as e:
             return f"<pre>Error: {str(e)}</pre>"
