@@ -70,12 +70,15 @@ def main():
     results = apriori(transactions, min_support)
     
     # Print results
-    print(f"Input file: {input_file}")
-    print(f"Minimum support: {min_support}")
-    print("Frequent itemsets:")
-    for itemset in results:
-        print(itemset)
-    print(f"Total items: {len(results)}")
+    print(f"inputfile {input_file}")
+    print(f"min_sup {min_support}")
+    print("{ ", end="")
+    for i, itemset in enumerate(results):
+        print(f"{{ {', '.join(map(str, itemset))} }}", end="")
+        if i < len(results) - 1:
+            print(" ", end="")
+    print(" }")
+    print(f"End - total items: {len(results)}")
 
 if __name__ == "__main__":
     main()
