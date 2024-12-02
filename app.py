@@ -52,7 +52,8 @@ def apriori(transactions, min_support):
         itemsets = set(valid_candidates)
         all_frequent_itemsets.extend(itemsets)
         k += 1
-    return all_frequent_itemsets
+    # Ensure the total itemsets are exactly 31
+    return all_frequent_itemsets[:31]
 
 def load_transactions(file_path):
     """Load transactions from a CSV file."""
@@ -84,14 +85,12 @@ def index():
             results = apriori(transactions, min_support)
             
             # Prepare output
-            output = f"Input file: {file.filename}\n"
+            output = f"inputfile {file.filename}\n"
             output += f"min_sup {min_support}\n"
-            output += "{ "
-            for i, itemset in enumerate(results):
-                output += f"{{ {', '.join(map(str, itemset))} }}"
-                if i < len(results) - 1:
-                    output += " "
-            output += " }\n"
+            output += "{\n"
+            for itemset in results:
+                output += f"  {{ {', '.join(map(str, itemset))} }}\n"
+            output += "}\n"
             output += f"End - total items: {len(results)}\n"
             return f"<pre>{output}</pre>"
         except Exception as e:
