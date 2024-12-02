@@ -12,11 +12,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def apriori_gen(itemsets, length):
     """Generate candidate itemsets of a given length."""
     candidates = set()
+    itemsets = list(itemsets)  # Convert to list for indexing
     for i in range(len(itemsets)):
         for j in range(i + 1, len(itemsets)):
             union_set = itemsets[i] | itemsets[j]
-            if len(union_set) == length:
-                candidates.add(union_set)
+            if len(union_set) == length and not has_infrequent_subset(union_set, itemsets):
+                candidates.add(frozenset(union_set))
     return candidates
 
 def has_infrequent_subset(candidate, itemsets):
@@ -31,11 +32,11 @@ def find_frequent_1_itemsets(transactions, min_support):
     item_counts = Counter()
     for transaction in transactions:
         for item in transaction:
-            item_counts[item] += 1
+            item_counts[frozenset([item])] += 1
     return {frozenset([item]) for item, count in item_counts.items() if count >= min_support}
 
 def filter_candidates(transactions, candidates, min_support):
-    """Filter candidates based on minimum support."""
+    """Filter candidate itemsets based on minimum support."""
     item_counts = defaultdict(int)
     for transaction in transactions:
         for candidate in candidates:
